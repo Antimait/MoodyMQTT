@@ -1,19 +1,27 @@
 #ifndef MoodyMQTT_h
 #define MoodyMQTT_h
 
+#define MQTT_MAX_PACKET_SIZE 256
+#define MQTT_KEEPALIVE       60
+#define MQTT_SOCKET_TIMEOUT  60
+
+
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
  
 
 #define MAX_NUM_SCENARIOS 15
-#define MQTT_PORT 1883
-#define GREET_PUB_TOPIC "moody/gateway/greeting/"
-#define GREET_SUB_TOPIC "moody/node/greeting"
-#define ACTUATOR_TOPIC  "moody/node/data/"
-#define SENSOR_TOPIC    "moody/gateway/data/"
+#define MQTT_PORT         1883
+#define GREET_PUB_TOPIC   "moody/gateway/greeting/"
+#define GREET_SUB_TOPIC   "moody/node/greeting"
+#define ACTUATOR_TOPIC    "moody/node/data/"
+#define SENSOR_TOPIC      "moody/gateway/data/"
+#define SENSOR            0
+#define ACTUATOR          1
 
 // Helper structs for data keeping
+
 
 struct nodedata {
     const char* type;
@@ -34,42 +42,45 @@ using NodeData = nodedata;
 
 
 // Classes definitions from here on
+void callback(char* topic, uint8_t* payload, unsigned int length);
 
 class MoodyNode
 {
     protected:
-        WiFiClient   wifiClient;
-        PubSubClient client;
-        NodeData*    nodeInfo;
-        char         greetMessage[256];
-        bool         started;   
-        int          room;
- 
-    public:
         MoodyNode(NodeData *data, int room);
-        void begin(const char* ssid, const char* pass, const char* brokeraddr);
-        void greet();
-        void keepAlive();
+        static MoodyNode*  instance;
+        WiFiClient         wifiClient;
+        PubSubClient       client;
+        NodeData*          nodeInfo;
+        char               greetMessage[256];
+        bool               started;   
+        int                room;
+
+    public:
+        static MoodyNode*  getInstance();
+        void               begin(const char* ssid, const char* pass, const char* brokeraddr);
+        void               greet();
+        void               loop();
 };
 
 class MoodySensor : public MoodyNode
 {
+    protected:
+        MoodySensor* init(NodeData* data, int room);
     public:
         MoodySensor(NodeData *data, int room);
         void send(int payload);
-    
 };
 
-template <typename T>
 class MoodyActuator : public MoodyNode
 {
-    private:
-        std::function<void(T command)> actuate;
+    protected:
         void callback(char *topic, byte *payload, unsigned int length);
-
     public:
         MoodyActuator(NodeData *data, int room);
-        void setActuateRoutine(std::function<void(T command)> actuate);
 };
+
+void moodyCallback(char *topic, byte *payload, unsigned int length);
+
 
 #endif

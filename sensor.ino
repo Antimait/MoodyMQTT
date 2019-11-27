@@ -29,7 +29,7 @@ long durata, distanza, lastdistanza;
 NodeData nodeInfo = {TYPE, GROUP, DATATYPES};
 MoodySensor sensor(&nodeInfo, room);
 
-bool almostEquals(long x, long y) {
+bool almostEquals(long x, long y) { 
   return abs(x-y) < EQUAL_THRESH;
 }
 
@@ -49,8 +49,6 @@ void setup() {
   durata = 0;
   distanza = 0;
   lastdistanza = 0;
-
-  sensor.greet();
 }
 
 void loop() {
@@ -65,14 +63,11 @@ void loop() {
   if(!almostEquals(distanza, lastdistanza)){
     Serial.print("Durata : ");
     Serial.print(durata);
-    Serial.print(" - Distanza : ");
+    Serial.print(" - Distanza : "); 
     Serial.println(distanza);
     sensor.send(distanza);
     lastdistanza = distanza;
   }
-  if(millis() - lastRefresh >= REFRESH){
-    sensor.keepAlive();
-    lastRefresh = millis();
-  }
+  sensor.loop();
   delay(50);
 }

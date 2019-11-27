@@ -1,14 +1,14 @@
 #include "MoodyMQTT.h"
 
+MoodyNode* MoodyNode::instance;
 
 MoodyNode::MoodyNode(NodeData *data, int room)
 {
     this->wifiClient = WiFiClient();
-    this->client = PubSubClient(this->wifiClient);
     this->nodeInfo = data;
     this->started = false;
     this->room = room;
-
+    
     StaticJsonDocument<100> json_p;
     json_p["action"] = "greet";
     json_p["macaddress"] = WiFi.macAddress();
@@ -17,7 +17,30 @@ MoodyNode::MoodyNode(NodeData *data, int room)
     json_p["datatypes"] = this->nodeInfo->datatypes;
 
     serializeJson(json_p, this->greetMessage);
+    MoodyNode::instance = this;
+}
 
+MoodyNode* MoodyNode::getInstance() { 
+    return MoodyNode::instance;
+}
+
+void MoodyNode::greet()
+{
+    this->client.publish((String(GREET_PUB_TOPIC) + this->room).c_str(), this->greetMessage);
+    Serial.println("Sending greet message");
+    Serial.println(this->greetMessage);
+}
+
+void callback(char* topic, uint8_t* payload, unsigned int length)
+{
+    Serial.println("Sub callback called");
+    
+    Serial.println("Msg arrived with topic: "+String(topic));   
+    if(String(topic).equals(GREET_SUB_TOPIC))
+    {
+        Serial.println("Greet received");
+    }
+    MoodyNode::getInstance()->greet();
 }
 
 void MoodyNode::begin(const char *ssid, const char *pass, const char *brokeraddr)
@@ -35,7 +58,8 @@ void MoodyNode::begin(const char *ssid, const char *pass, const char *brokeraddr
     }
     Serial.println("Connected with IP address: "+WiFi.localIP().toString());
 
-    this->client.setServer(brokeraddr, MQTT_PORT);
+    this->client = PubSubClient(brokeraddr, MQTT_PORT, callback, this->wifiClient);
+
     while (!this->client.connected())
     {
         Serial.print("Trying to connect to the broker @"+String(brokeraddr));
@@ -46,7 +70,7 @@ void MoodyNode::begin(const char *ssid, const char *pass, const char *brokeraddr
             Serial.println("Connected!");
         }
         else
-        {
+        {   
             Serial.print("Connection failed, rc=");
             Serial.print(this->client.state());
             Serial.println(" trying again in 5 seconds.");
@@ -55,19 +79,12 @@ void MoodyNode::begin(const char *ssid, const char *pass, const char *brokeraddr
     }
     this->client.subscribe(GREET_SUB_TOPIC);
     this->started = true;
-    delay(2000);
     this->greet();
+    this->client.loop();
 }
 
 
-void MoodyNode::greet()
+void MoodyNode::loop()
 {
-    this->client.publish((String(GREET_PUB_TOPIC) + this->room).c_str(), this->greetMessage);
-    Serial.println(this->greetMessage);
+    this->client.loop();
 }
-
-void MoodyNode::keepAlive()
-{
-    this->client.publish("ka", "1");
-}
-

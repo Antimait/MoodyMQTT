@@ -1,10 +1,8 @@
 #include "MoodyMQTT.h"
 
-template <typename T>
-MoodyActuator<T>::MoodyActuator(NodeData *dataInfo, int room) : MoodyNode(dataInfo, room){}
+MoodyActuator::MoodyActuator(NodeData *dataInfo, int room) : MoodyNode(dataInfo, room){}
 
-template <typename T>
-void MoodyActuator<T>::callback(char *topic, byte *payload, unsigned int length)
+void MoodyActuator::callback(char *topic, byte *payload, unsigned int length)
 {
     //payload in json format, to put in this->data and then burn to eeprom
     //if it gets updated
@@ -19,7 +17,3 @@ void MoodyActuator<T>::callback(char *topic, byte *payload, unsigned int length)
     
 }
 
-template <typename T>
-void setActuateRoutine(std::function<void(T command)> actuate){
-    //actuate = actuate;
-}
